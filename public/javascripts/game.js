@@ -1,6 +1,8 @@
 $(function () {
   var socket = io();
 
+  $('#nicknameModal').modal('show');
+
   $('#chat').submit(function(e) {
     e.preventDefault();
     socket.emit('chat message', $('#m').val());
