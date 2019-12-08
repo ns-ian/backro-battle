@@ -7,6 +7,7 @@
 var app = require('../app');
 var debug = require('debug')('backro-battle:server');
 var http = require('http');
+var uuid = require('uuid/v4');
 
 /**
  * Get port from environment and store in Express.
@@ -26,11 +27,31 @@ var server = http.createServer(app);
  */
 
 var io = require('socket.io')(server);
+var rooms = {
+  devTestRoom: {
+    id: uuid(),
+    name: 'default',
+    sockets: []
+  },
+};
 
 io.on('connection', function(socket) {
+  //temporary
+  socket.join('default');
+
   console.log('a user connected');
+  console.log(socket.id);
+
+  socket.on('player joined', function(player) {
+    socket.to('default').emit('player joined', player);
+  });
+
+  socket.on('send player data', function(socketId, playerData) {
+    socket.to(socketId).emit('add existing player', playerData);
+  });
 
   socket.on('disconnect', function() {
+    socket.to('default').emit('player left', socket.id);
     console.log('a user disconnected');
   });
 
