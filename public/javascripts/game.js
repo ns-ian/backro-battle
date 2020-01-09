@@ -22,6 +22,7 @@ $(function () {
       IO.$chatDiv = $('#chat-div');
       IO.$m = $('#m');
       IO.$nicknameModal = $('#nicknameModal');
+      IO.$gameMessage = $('#game-message');
     },
 
     bindEvents: function() {
@@ -30,6 +31,9 @@ $(function () {
       IO.socket.on('player joined', IO.playerJoined);
       IO.socket.on('add existing player', IO.addExistingPlayer);
       IO.socket.on('player left', IO.playerLeft);
+      IO.socket.on('countdown', IO.countdown);
+      IO.socket.on('countdown finished', IO.roundReady);
+      IO.socket.on('begin round', IO.beginRound);
     },
 
     onConnect: function() {
@@ -62,11 +66,26 @@ $(function () {
       console.log('Added existing player!');
       console.log(Game.players);
     },
+
+    countdown: function(prefix, count) {
+      IO.$gameMessage.html(prefix + count + ' seconds.');
+    },
+
+    roundReady: function() {
+      IO.$gameMessage.text('Waiting for other players...');
+      IO.socket.emit('round ready');
+    },
+
+    beginRound: function(acro) {
+      Game.acro = acro;
+      Player.phrase = '';
+    },
   };
 
   var Game = {
 
     players: {},
+    acro: '',
 
     init: function() {
       console.log('Game init!');
@@ -74,7 +93,7 @@ $(function () {
   };
 
   var Player = {
-    socketId: 0,
+    socketId: '',
     nickname: '',
     score: 0,
     phrase: '',

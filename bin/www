@@ -27,23 +27,37 @@ var server = http.createServer(app);
  */
 
 var io = require('socket.io')(server);
-var rooms = {
-  devTestRoom: {
-    id: uuid(),
-    name: 'default',
-    sockets: []
-  },
-};
+var rooms = {};
+const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 io.on('connection', function(socket) {
   //temporary
-  socket.join('default');
+  socket.join('testRoom');
+  if (typeof rooms['testRoom'] === 'undefined') {
+    rooms['testRoom'] = {};
+    rooms['testRoom'].inProgress = false;
+    rooms['testRoom'].voting = false;
+    rooms['testRoom'].roundNumber = 0;
+    rooms['testRoom'].sockets = [];
+    rooms['testRoom'].readyQueue = [];
+    rooms['testRoom'].sockets.push(socket.id);
+    console.log('A new room was created!');
+    console.log(rooms);
+  } else {
+    rooms['testRoom'].sockets.push(socket.id);
+    console.log('A player joined a room!');
+    console.log(rooms);
+    if (rooms['testRoom'].sockets.length >= 3 && !rooms['testRoom'].inProgress) {
+      rooms['testRoom'].inProgress = true;
+      countdown('testRoom', 'The game will begin in ', 30);
+    }
+  }
 
   console.log('a user connected');
   console.log(socket.id);
 
   socket.on('player joined', function(player) {
-    socket.to('default').emit('player joined', player);
+    socket.to('testRoom').emit('player joined', player);
   });
 
   socket.on('send player data', function(socketId, playerData) {
@@ -51,15 +65,74 @@ io.on('connection', function(socket) {
   });
 
   socket.on('disconnect', function() {
-    socket.to('default').emit('player left', socket.id);
+    socket.to('testRoom').emit('player left', socket.id);
+    const index = rooms['testRoom'].sockets.indexOf(socket.id);
+    if (index > -1) {
+      rooms['testRoom'].sockets.splice(index, 1);
+    }
+    if (rooms['testRoom'].sockets.length === 0) {
+      delete rooms['testRoom'];
+    }
     console.log('a user disconnected');
+    console.log(rooms);
   });
 
   socket.on('chat message', function(msg) {
     console.log(msg);
     io.emit('chat message', msg);
   });
+
+  socket.on('countdown finished', function() {
+    console.log('Countdown finished!');
+  });
+
+  socket.on('round ready', function() {
+    countReadyPlayers('testRoom', socket.id);
+  });
 });
+
+const countdown = function(roomName, prefix, count) {
+  var countdownInterval = setInterval(function() {
+    count--;
+    io.sockets.in(roomName).emit('countdown', prefix, count);
+    if (count <= 0) {
+      clearInterval(countdownInterval);
+      io.sockets.in(roomName).emit('countdown finished');
+    }
+  }, 1000);
+}
+
+const countReadyPlayers = function(roomName, socketId) {
+  let gameRoom = rooms[roomName];
+  gameRoom.readyQueue.push(socketId);
+  if (gameRoom.readyQueue.length === gameRoom.sockets.length) {
+    gameRoom.readyQueue = [];
+    if (gameRoom.roundNumber < 1) {
+      beginRound(roomName);
+    } else if (gameRoom.voting) {
+      // collect votes, display results, count down to next round
+    } else {
+      // collect phrases, go to voting round
+    }
+  }
+}
+
+const beginRound = function(roomName) {
+  let acroLength = Math.floor((Math.random() * 3) + 3);
+  rooms[roomName].roundNumber++;
+  rooms[roomName].roundAcro = makeAcroString(acroLength);
+  io.sockets.in(roomName).emit('begin round', rooms[roomName].roundAcro);
+  let prefix = 'This round\'s acro is <b>' + rooms[roomName].roundAcro + '</b><br>Find a backronym in ';
+  countdown(roomName, prefix, 60);
+}
+
+const makeAcroString = function(length) {
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += CHARACTERS.charAt(Math.floor(Math.random() * 26));
+  }
+  return result;
+}
 
 /**
  * Listen on provided port, on all network interfaces.
