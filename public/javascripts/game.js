@@ -23,6 +23,7 @@ $(function () {
       IO.$m = $('#m');
       IO.$nicknameModal = $('#nicknameModal');
       IO.$gameMessage = $('#game-message');
+      IO.$phraseInput = $('#backro');
     },
 
     bindEvents: function() {
@@ -89,6 +90,28 @@ $(function () {
 
     init: function() {
       console.log('Game init!');
+      IO.$phraseInput.on('input', Game.checkPhrase);
+    },
+
+    checkPhrase: function() {
+      let phrase = IO.$phraseInput.val();
+      if (phrase.length < 1) {
+        IO.$phraseInput.css({'background-color':''});
+        return;
+      }
+      Game.phraseIsValid(phrase) ? IO.$phraseInput.css({'background-color':'#00FF00'})
+                                 : IO.$phraseInput.css({'background-color':'#FF0000'});
+    },
+
+    phraseIsValid: function(phrase) {
+      let splitPhrase = phrase.toUpperCase().split(' ');
+      for (let i = 0; i < splitPhrase.length; i++) {
+        if (splitPhrase[i].charAt(0) !== Game.acro.charAt(i)) {
+          return false;
+        } else if (i === (Game.acro.length - 1)) {
+          return true;
+        }
+      }
     },
   };
 
