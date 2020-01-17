@@ -1,6 +1,14 @@
 $(function () {
 
-  //$('#nicknameModal').modal('show');
+  $('#nicknameModal').modal('show');
+
+  $('#nicknameModalForm').submit(function(e) {
+    e.preventDefault();
+    Player.nickname = IO.$nickname.val();
+    Player.roomName = IO.$roomName.val();
+    IO.socket.open();
+    $('#nicknameModal').modal('hide');
+  });
 
   $('#chat').submit(function(e) {
     e.preventDefault();
@@ -12,22 +20,27 @@ $(function () {
   var IO = {
 
     init: function() {
-      IO.socket = io.connect();
+      IO.socket = io({ autoConnect: false });
       IO.cacheElements();
       IO.bindEvents();
     },
 
     cacheElements: function() {
+      IO.$playerList = $('#player-list');
       IO.$chatMessages = $('#chat-messages');
       IO.$chatDiv = $('#chat-div');
       IO.$m = $('#m');
       IO.$nicknameModal = $('#nicknameModal');
+      IO.$nickname = $('#nickname');
+      IO.$roomName = $('#roomName');
       IO.$gameMessage = $('#game-message');
       IO.$phraseInput = $('#backro');
+      IO.$backroForm = $('#backro-form');
     },
 
     bindEvents: function() {
       IO.socket.on('connect', IO.onConnect);
+      IO.socket.on('update player list', IO.updatePlayerList);
       IO.socket.on('chat message', IO.chatMessage);
       IO.socket.on('player joined', IO.playerJoined);
       IO.socket.on('add existing player', IO.addExistingPlayer);
@@ -39,9 +52,20 @@ $(function () {
 
     onConnect: function() {
       Player.socketId = IO.socket.id;
-      Game.players[Player.socketId] = Player;
-      IO.socket.emit('player joined', Player);
-      console.log(Game.players);
+      //Game.players[Player.socketId] = Player;
+      //IO.socket.emit('player joined', Player);
+      //console.log(Game.players);
+
+      IO.socket.emit('join room', Player);
+    },
+
+    updatePlayerList: function(players) {
+      $('#player-list li').remove();
+      Game.players = players;
+      let sortedPlayers = Object.entries(Game.players).sort((a, b) => a[1].score - b[1].score);
+      for (let [socket, player] of sortedPlayers) {
+        IO.$playerList.append($('<li>').text(`${player.nickname} (${player.score})`));
+      }
     },
 
     chatMessage: function(msg) {
@@ -74,12 +98,15 @@ $(function () {
 
     roundReady: function() {
       IO.$gameMessage.text('Waiting for other players...');
-      IO.socket.emit('round ready');
+      IO.socket.emit('round ready', Player.roomName);
     },
 
     beginRound: function(acro) {
       Game.acro = acro;
-      Player.phrase = '';
+      Game.backro = '';
+    },
+
+    endRound: function() {
     },
   };
 
@@ -87,10 +114,20 @@ $(function () {
 
     players: {},
     acro: '',
+    backro: '',
 
     init: function() {
       console.log('Game init!');
       IO.$phraseInput.on('input', Game.checkPhrase);
+      IO.$backroForm.submit(function(e) {
+        e.preventDefault();
+        let backro = IO.$phraseInput.val();
+        if (Game.phraseIsValid(backro)) {
+          Player.phrase = backro;
+          IO.$phraseInput.val('');
+        }
+        return false;
+      });
     },
 
     checkPhrase: function() {
@@ -117,9 +154,9 @@ $(function () {
 
   var Player = {
     socketId: '',
+    roomName: '',
     nickname: '',
     score: 0,
-    phrase: '',
   };
 
   IO.init();
