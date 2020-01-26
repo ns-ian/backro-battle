@@ -42,7 +42,7 @@ io.on('connection', function(socket) {
       rooms[roomName] = {};
       rooms[roomName].players = {};
       rooms[roomName].inProgress = false;
-      rooms[roomName].voting = false;
+      rooms[roomName].gameStatus = 'PREGAME';
       rooms[roomName].roundNumber = 0;
       rooms[roomName].sockets = [];
       rooms[roomName].readyQueue = [];
@@ -63,14 +63,6 @@ io.on('connection', function(socket) {
     }
     let allPlayers = rooms[roomName].players;
     io.in(roomName).emit('update player list', allPlayers);
-  });
-
-  socket.on('player joined', function(player) {
-    socket.to('testRoom').emit('player joined', player);
-  });
-
-  socket.on('send player data', function(socketId, playerData) {
-    socket.to(socketId).emit('add existing player', playerData);
   });
 
   socket.on('disconnecting', function(reason) {
@@ -101,12 +93,19 @@ io.on('connection', function(socket) {
     io.emit('chat message', msg);
   });
 
-  socket.on('countdown finished', function() {
-    console.log('Countdown finished!');
-  });
-
   socket.on('round ready', function(roomName) {
     countReadyPlayers(roomName, socket.id);
+  });
+
+  socket.on('player backro', function(player) {
+    rooms[player.roomName].players[player.socketId] = player;
+    countReadyPlayers(player.roomName, player.socketId);
+  });
+
+  socket.on('player vote', function(player, vote) {
+    rooms[player.roomName].players[vote].score++;
+    rooms[player.roomName].players[vote].votesReceived++;
+    countReadyPlayers(player.roomName, player.socketId);
   });
 });
 
@@ -126,12 +125,21 @@ const countReadyPlayers = function(roomName, socketId) {
   gameRoom.readyQueue.push(socketId);
   if (gameRoom.readyQueue.length === gameRoom.sockets.length) {
     gameRoom.readyQueue = [];
-    if (gameRoom.roundNumber < 1) {
+    if (gameRoom.roundNumber < 1 || gameRoom.gameStatus === 'RESULTS') {
       beginRound(roomName);
-    } else if (gameRoom.voting) {
-      // collect votes, display results, count down to next round
-    } else {
+    } else if (gameRoom.gameStatus === 'VOTING') {
+      collectVotes(roomName);
+    } else if (gameRoom.gameStatus === 'COLLECT VOTES') {
+      showResults(roomName);
+    } else if (gameRoom.gameStatus === 'COLLECT BACKROS') {
+      // begin voting round
+      gameRoom.gameStatus = 'VOTING';
+      io.sockets.in(roomName).emit('show backros', gameRoom.players);
+      countdown(roomName, 'Got submissions! Voting round ends in ', 30);
+    } else if (gameRoom.gameStatus === 'SUBMIT BACKROS') {
       // collect phrases, go to voting round
+      gameRoom.gameStatus = 'COLLECT BACKROS';
+      io.sockets.in(roomName).emit('collect backros');
     }
   }
 }
@@ -140,9 +148,25 @@ const beginRound = function(roomName) {
   let acroLength = Math.floor((Math.random() * 3) + 3);
   rooms[roomName].roundNumber++;
   rooms[roomName].roundAcro = makeAcroString(acroLength);
+  rooms[roomName].gameStatus = 'SUBMIT BACKROS';
   io.sockets.in(roomName).emit('begin round', rooms[roomName].roundAcro);
   let prefix = 'This round\'s acro is <b>' + rooms[roomName].roundAcro + '</b><br>Find a backronym in ';
-  countdown(roomName, prefix, 60);
+  countdown(roomName, prefix, 30);
+}
+
+const collectVotes = function(roomName) {
+  rooms[roomName].gameStatus = 'COLLECT VOTES';
+  io.sockets.in(roomName).emit('collect votes');
+}
+
+const showResults = function(roomName) {
+  rooms[roomName].gameStatus = 'RESULTS';
+  io.sockets.in(roomName).emit('voting results', rooms[roomName].players);
+  io.sockets.in(roomName).emit('update player list', rooms[roomName].players);
+  for (const player in rooms[roomName].players) {
+    rooms[roomName].players[player].votesReceived = 0;
+  }
+  countdown(roomName, 'The results are in! Next round begins in ', 30);
 }
 
 const makeAcroString = function(length) {

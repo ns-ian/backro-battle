@@ -34,35 +34,36 @@ $(function () {
       IO.$nickname = $('#nickname');
       IO.$roomName = $('#roomName');
       IO.$gameMessage = $('#game-message');
-      IO.$phraseInput = $('#backro');
+      IO.$backroInput = $('#backro');
       IO.$backroForm = $('#backro-form');
+      IO.$backroList = $('#backro-list');
     },
 
     bindEvents: function() {
-      IO.socket.on('connect', IO.onConnect);
-      IO.socket.on('update player list', IO.updatePlayerList);
-      IO.socket.on('chat message', IO.chatMessage);
-      IO.socket.on('player joined', IO.playerJoined);
       IO.socket.on('add existing player', IO.addExistingPlayer);
-      IO.socket.on('player left', IO.playerLeft);
+      IO.socket.on('begin round', IO.beginRound);
+      IO.socket.on('chat message', IO.chatMessage);
+      IO.socket.on('collect backros', IO.sendBackro);
+      IO.socket.on('collect votes', IO.sendVote);
+      IO.socket.on('connect', IO.onConnect);
       IO.socket.on('countdown', IO.countdown);
       IO.socket.on('countdown finished', IO.roundReady);
-      IO.socket.on('begin round', IO.beginRound);
+      IO.socket.on('player joined', IO.playerJoined);
+      IO.socket.on('player left', IO.playerLeft);
+      IO.socket.on('show backros', IO.showBackros);
+      IO.socket.on('update player list', IO.updatePlayerList);
+      IO.socket.on('voting results', IO.showResults);
     },
 
     onConnect: function() {
       Player.socketId = IO.socket.id;
-      //Game.players[Player.socketId] = Player;
-      //IO.socket.emit('player joined', Player);
-      //console.log(Game.players);
-
       IO.socket.emit('join room', Player);
     },
 
     updatePlayerList: function(players) {
       $('#player-list li').remove();
       Game.players = players;
-      let sortedPlayers = Object.entries(Game.players).sort((a, b) => a[1].score - b[1].score);
+      let sortedPlayers = Object.entries(Game.players).sort((a, b) => b[1].score - a[1].score);
       for (let [socket, player] of sortedPlayers) {
         IO.$playerList.append($('<li>').text(`${player.nickname} (${player.score})`));
       }
@@ -73,79 +74,104 @@ $(function () {
       IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
     },
 
-    playerJoined: function(player) {
-      IO.socket.emit('send player data', player.socketId, Player);
-      Game.players[player.socketId] = player;
-      console.log('A new player joined!');
-      console.log(Game.players);
-    },
-
-    playerLeft: function(socketId) {
-      delete Game.players[socketId];
-      console.log('Player with ID ' + socketId + ' left!');
-      console.log(Game.players);
-    },
-
-    addExistingPlayer: function(player) {
-      Game.players[player.socketId] = player;
-      console.log('Added existing player!');
-      console.log(Game.players);
-    },
-
     countdown: function(prefix, count) {
       IO.$gameMessage.html(prefix + count + ' seconds.');
     },
 
     roundReady: function() {
-      IO.$gameMessage.text('Waiting for other players...');
+      IO.$gameMessage.html('Waiting for other players...');
       IO.socket.emit('round ready', Player.roomName);
     },
 
     beginRound: function(acro) {
+      IO.$backroList.empty();
       Game.acro = acro;
-      Game.backro = '';
+      Player.backro = '';
     },
 
     endRound: function() {
+    },
+
+    sendBackro: function() {
+      IO.socket.emit('player backro', Player);
+    },
+
+    showBackros: function(players) {
+      Game.players = players;
+      IO.$backroList.empty();
+      for (const player in Game.players) {
+        IO.$backroList.append(
+          $('<li><a href="#" style="text-decoration: none;">' +
+            Game.players[player].backro +
+            '</a></li>')
+        );
+      }
+    },
+
+    sendVote: function() {
+      for (const player in Game.players) {
+        if (Player.vote === Game.players[player].backro) {
+          IO.socket.emit('player vote', Player, player);
+        }
+      }
+    },
+
+    showResults: function(players) {
+      Game.players = players;
+      IO.$backroList.empty();
+      for (const player in Game.players) {
+        IO.$backroList.append(
+          $('<li>' + Game.players[player].backro +
+            ' <strong>(' + Game.players[player].votesReceived +
+            ')</strong></li>')
+        );
+      }
     },
   };
 
   var Game = {
 
     players: {},
+    backros: {},
     acro: '',
-    backro: '',
 
     init: function() {
       console.log('Game init!');
-      IO.$phraseInput.on('input', Game.checkPhrase);
+      IO.$backroInput.on('input', Game.checkBackro);
       IO.$backroForm.submit(function(e) {
         e.preventDefault();
-        let backro = IO.$phraseInput.val();
-        if (Game.phraseIsValid(backro)) {
-          Player.phrase = backro;
-          IO.$phraseInput.val('');
+        let backro = IO.$backroInput.val();
+        if (Game.backroIsValid(backro)) {
+          Player.backro = backro;
+          IO.$backroInput.val('');
+          IO.$backroInput.css({'background-color':''});
         }
         return false;
       });
+
+      $('#backro-list').on('click', 'li a', function(e) {
+        Player.vote = $(e.target).text();
+        $('#backro-list li a').css({'background-color':''});
+        $(this).css({'background-color':'#00FF00'});
+      });
     },
 
-    checkPhrase: function() {
-      let phrase = IO.$phraseInput.val();
+    checkBackro: function() {
+      let phrase = IO.$backroInput.val();
       if (phrase.length < 1) {
-        IO.$phraseInput.css({'background-color':''});
+        IO.$backroInput.css({'background-color':''});
         return;
       }
-      Game.phraseIsValid(phrase) ? IO.$phraseInput.css({'background-color':'#00FF00'})
-                                 : IO.$phraseInput.css({'background-color':'#FF0000'});
+      Game.backroIsValid(phrase) ? IO.$backroInput.css({'background-color':'#00FF00'})
+                                 : IO.$backroInput.css({'background-color':'#FF0000'});
     },
 
-    phraseIsValid: function(phrase) {
-      let splitPhrase = phrase.toUpperCase().split(' ');
-      for (let i = 0; i < splitPhrase.length; i++) {
-        if (splitPhrase[i].charAt(0) !== Game.acro.charAt(i)) {
+    backroIsValid: function(phrase) {
+      let splitBackro = phrase.toUpperCase().split(' ');
+      for (let i = 0; i < splitBackro.length; i++) {
+        if (i > (Game.acro.length - 1) || splitBackro[i].charAt(0) !== Game.acro.charAt(i)) {
           return false;
-        } else if (i === (Game.acro.length - 1)) {
+        } else if (i === (Game.acro.length - 1) && splitBackro.length === Game.acro.length) {
           return true;
         }
       }
@@ -156,7 +182,10 @@ $(function () {
     socketId: '',
     roomName: '',
     nickname: '',
+    backro: '',
+    vote: '',
     score: 0,
+    votesReceived: 0,
   };
 
   IO.init();
