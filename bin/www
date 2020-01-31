@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+//TODO When people leave and sockets.length < 3?
+//TODO Sanitize user inputs before chat
+//TODO Only allow alphanumerics for modal inputs
+//TODO Don't allow blank nicknames, room names
+//TODO You shouldn't be allowed to vote for your own backro!
+
 /**
  * Module dependencies.
  */
@@ -7,7 +13,6 @@
 var app = require('../app');
 var debug = require('debug')('backro-battle:server');
 var http = require('http');
-var uuid = require('uuid/v4');
 
 /**
  * Get port from environment and store in Express.
@@ -28,7 +33,7 @@ var server = http.createServer(app);
 
 var io = require('socket.io')(server);
 var rooms = {};
-const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWYZ'; // X isn't fun
 
 io.on('connection', function(socket) {
   console.log('a user connected');
@@ -38,30 +43,33 @@ io.on('connection', function(socket) {
     let roomName = player.roomName;
     let socketId = player.socketId;
     socket.join(roomName);
+
     if (typeof rooms[roomName] === 'undefined') {
       rooms[roomName] = {};
-      rooms[roomName].players = {};
-      rooms[roomName].inProgress = false;
-      rooms[roomName].gameStatus = 'PREGAME';
-      rooms[roomName].roundNumber = 0;
-      rooms[roomName].sockets = [];
-      rooms[roomName].readyQueue = [];
+      let gameRoom = rooms[roomName];
 
-      rooms[roomName].players[socketId] = player;
-      rooms[roomName].sockets.push(socket.id);
+      gameRoom.players = {};
+      gameRoom.inProgress = false;
+      gameRoom.roundNumber = 0;
+      gameRoom.sockets = [];
+      gameRoom.readyQueue = [];
+      gameRoom.next = beginRound;
+
+      gameRoom.players[socketId] = player;
+      gameRoom.sockets.push(socket.id);
       console.log('Room ' + roomName + ' was created!');
       console.log(rooms);
     } else {
-      rooms[roomName].players[socketId] = player;
-      rooms[roomName].sockets.push(socket.id);
+      gameRoom.players[socketId] = player;
+      gameRoom.sockets.push(socket.id);
       console.log('A player joined room ' + roomName + '!');
       console.log(rooms);
-      if (rooms[roomName].sockets.length > 2 && !rooms[roomName].inProgress) {
-        rooms[roomName].inProgress = true;
+      if (gameRoom.sockets.length > 2 && !gameRoom.inProgress) {
+        gameRoom.inProgress = true;
         countdown(roomName, 'The game will begin in ', 30);
       }
     }
-    let allPlayers = rooms[roomName].players;
+    let allPlayers = gameRoom.players;
     io.in(roomName).emit('update player list', allPlayers);
   });
 
@@ -125,54 +133,75 @@ const countReadyPlayers = function(roomName, socketId) {
   gameRoom.readyQueue.push(socketId);
   if (gameRoom.readyQueue.length === gameRoom.sockets.length) {
     gameRoom.readyQueue = [];
-    if (gameRoom.roundNumber < 1 || gameRoom.gameStatus === 'RESULTS') {
-      beginRound(roomName);
-    } else if (gameRoom.gameStatus === 'VOTING') {
-      collectVotes(roomName);
-    } else if (gameRoom.gameStatus === 'COLLECT VOTES') {
-      showResults(roomName);
-    } else if (gameRoom.gameStatus === 'COLLECT BACKROS') {
-      // begin voting round
-      gameRoom.gameStatus = 'VOTING';
-      io.sockets.in(roomName).emit('show backros', gameRoom.players);
-      countdown(roomName, 'Got submissions! Voting round ends in ', 30);
-    } else if (gameRoom.gameStatus === 'SUBMIT BACKROS') {
-      // collect phrases, go to voting round
-      gameRoom.gameStatus = 'COLLECT BACKROS';
-      io.sockets.in(roomName).emit('collect backros');
-    }
+    gameRoom.next(roomName);
   }
 }
 
 const beginRound = function(roomName) {
+  let gameRoom = rooms[roomName];
   let acroLength = Math.floor((Math.random() * 3) + 3);
-  rooms[roomName].roundNumber++;
-  rooms[roomName].roundAcro = makeAcroString(acroLength);
-  rooms[roomName].gameStatus = 'SUBMIT BACKROS';
-  io.sockets.in(roomName).emit('begin round', rooms[roomName].roundAcro);
-  let prefix = 'This round\'s acro is <b>' + rooms[roomName].roundAcro + '</b><br>Find a backronym in ';
+  gameRoom.roundNumber++;
+  gameRoom.roundAcro = makeAcroString(acroLength);
+  gameRoom.next = collectBackros;
+  io.sockets.in(roomName).emit('begin round', gameRoom.roundAcro);
+  let prefix = 'This round\'s acro is <b>' + gameRoom.roundAcro + '</b><br>Find a backronym in ';
   countdown(roomName, prefix, 30);
 }
 
+const collectBackros = function(roomName) {
+  rooms[roomName].next = beginVoting;
+  io.sockets.in(roomName).emit('collect backros');
+}
+
+const beginVoting = function(roomName) {
+  rooms[roomName].next = collectVotes;
+  io.sockets.in(roomName).emit('show backros', rooms[roomName].players);
+  countdown(roomName, 'Got submissions! Voting round ends in ', 30);
+}
+
 const collectVotes = function(roomName) {
-  rooms[roomName].gameStatus = 'COLLECT VOTES';
+  rooms[roomName].next = showResults;
   io.sockets.in(roomName).emit('collect votes');
 }
 
 const showResults = function(roomName) {
-  rooms[roomName].gameStatus = 'RESULTS';
-  io.sockets.in(roomName).emit('voting results', rooms[roomName].players);
-  io.sockets.in(roomName).emit('update player list', rooms[roomName].players);
-  for (const player in rooms[roomName].players) {
-    rooms[roomName].players[player].votesReceived = 0;
+  let gameRoom = rooms[roomName];
+  gameRoom.roundNumber > 9 ? gameRoom.next = postGame : gameRoom.next = beginRound;
+  io.sockets.in(roomName).emit('voting results', gameRoom.players);
+  io.sockets.in(roomName).emit('update player list', gameRoom.players);
+  for (const player in gameRoom.players) {
+    gameRoom.players[player].votesReceived = 0;
   }
   countdown(roomName, 'The results are in! Next round begins in ', 30);
+}
+
+const postGame = function(roomName) {
+  let gameRoom = rooms[roomName];
+  let maxScore = null;
+  let winners = [];
+
+  gameRoom.next = beginRound;
+
+  for (const player in gameRoom.players) {
+    let playerScore = gameRoom.players[player].score;
+    if (maxScore === null || playerScore > maxScore) {
+      maxScore = playerScore;
+    }
+  }
+  for (const player in gameRoom.players) {
+    let thisPlayer = gameRoom.players[player];
+    if (thisPlayer.score === maxScore) {
+      winners.push(thisPlayer);
+    }
+  }
+  io.sockets.in(roomName).emit('show winners', winners);
+  countdown(roomName, 'Game complete! A new game will begin in ', 60);
 }
 
 const makeAcroString = function(length) {
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += CHARACTERS.charAt(Math.floor(Math.random() * 26));
+    result += CHARACTERS.charAt(Math.floor(Math.random() * 25));
   }
   return result;
 }
