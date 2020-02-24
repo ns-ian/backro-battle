@@ -12,7 +12,7 @@ $(function () {
 
   $('#chat').submit(function(e) {
     e.preventDefault();
-    IO.socket.emit('chat message', $('#m').val());
+    IO.socket.emit('chat message', $('#m').val(), Player);
     $('#m').val('');
     return false;
   });
@@ -53,6 +53,8 @@ $(function () {
       IO.socket.on('show backros', IO.showBackros);
       IO.socket.on('update player list', IO.updatePlayerList);
       IO.socket.on('voting results', IO.showResults);
+      IO.socket.on('system message', IO.systemMessage);
+      IO.socket.on('postgame message', IO.postgameMessage);
     },
 
     onConnect: function() {
@@ -74,8 +76,22 @@ $(function () {
       IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
     },
 
-    countdown: function(prefix, count) {
-      IO.$gameMessage.html(prefix + count + ' seconds.');
+    systemMessage: function(msg) {
+      IO.$chatMessages.append($('<li>').html('<strong>[SYSTEM] ' + msg + '</strong>'));
+      IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
+    },
+
+    countdown: function(template, count) {
+      IO.$gameMessage.html(IO.fillTemplate(template, count));
+    },
+
+    postgameMessage: function() {
+      msg = 'Game complete! A new game will begin if 3 players say NEWGAME in the chat.';
+      IO.$gameMessage.html(msg);
+    },
+
+    fillTemplate: function(templateString, count) {
+      return new Function("return `" + templateString + "`;").call(count);
     },
 
     roundReady: function() {
@@ -87,9 +103,6 @@ $(function () {
       IO.$backroList.empty();
       Game.acro = acro;
       Player.backro = '';
-    },
-
-    endRound: function() {
     },
 
     sendBackro: function() {
@@ -109,11 +122,14 @@ $(function () {
     },
 
     sendVote: function() {
+      if (Player.vote === '') { IO.socket.emit('player vote', Player, null) }
+
       for (const player in Game.players) {
         if (Player.vote === Game.players[player].backro) {
           IO.socket.emit('player vote', Player, player);
         }
       }
+      Player.vote = '';
     },
 
     showResults: function(players) {
