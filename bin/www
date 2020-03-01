@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 //TODO When people leave and sockets.length < 3?
-//TODO Sanitize user inputs before chat
-//TODO Only allow alphanumerics for modal inputs
 //TODO Don't allow blank nicknames, room names
 //TODO You shouldn't be allowed to vote for your own backro!
 //TODO Empty answer shouldn't appear as an item in voting round

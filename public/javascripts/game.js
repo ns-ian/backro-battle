@@ -4,6 +4,15 @@ $(function () {
 
   $('#nicknameModalForm').submit(function(e) {
     e.preventDefault();
+    let allowed = /^[a-zA-Z0-9- _]*$/;
+    if (!allowed.test(IO.$nickname.val()) ||
+      !allowed.test(IO.$roomName.val())) {
+      $('#modalFormError')
+        .text('Names must only include letters, numbers, spaces, or underscores.')
+        .css('color', 'red');
+      return;
+    }
+
     Player.nickname = IO.$nickname.val();
     Player.roomName = IO.$roomName.val();
     IO.socket.open();
