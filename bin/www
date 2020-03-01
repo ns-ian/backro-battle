@@ -108,7 +108,7 @@ io.on('connection', function(socket) {
       gameRoom.readyQueue.push(player.socketId);
       if(gameRoom.readyQueue.length > 2) startNewGame(player);
     }
-    io.in(player.roomName).emit('chat message', msg);
+    io.in(player.roomName).emit('chat message', player.nickname, msg);
   });
 
   socket.on('round ready', function(roomName) {
@@ -228,10 +228,10 @@ const announceWinners = function(winners, roomName) {
   if (winners.length < 2) {
     announcement = 'And the winner is... ' + winners[0].nickname + '!';
   } else {
-    let winnersString = '';
+    let winnersString;
     winners.forEach((element, index) => {
       if (index === 0) {
-        winnersString.concat('', element.nickname);
+        winnersString = element.nickname;
       } else if (index === winners.length - 1) {
         winnersString.concat(' and ', element.nickname, '!');
       } else {

@@ -71,8 +71,11 @@ $(function () {
       }
     },
 
-    chatMessage: function(msg) {
-      IO.$chatMessages.append($('<li>').text(msg));
+    chatMessage: function(nickname, msg) {
+      let prefix = '<strong>' + nickname + ': </strong>';
+      let msgBody = $.parseHTML(msg);
+      let message = prefix + $(msgBody).text();
+      IO.$chatMessages.append($('<li>').html(message));
       IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
     },
 
