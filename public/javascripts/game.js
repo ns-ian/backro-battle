@@ -4,17 +4,26 @@ $(function () {
 
   $('#nicknameModalForm').submit(function(e) {
     e.preventDefault();
+    let roomName = IO.$roomName.val().trim();
+    let nickname = IO.$nickname.val().trim();
     let allowed = /^[a-zA-Z0-9- _]*$/;
-    if (!allowed.test(IO.$nickname.val()) ||
-      !allowed.test(IO.$roomName.val())) {
+
+    if (!allowed.test(roomName) || !allowed.test(nickname)) {
       $('#modalFormError')
         .text('Names must only include letters, numbers, spaces, or underscores.')
         .css('color', 'red');
       return;
     }
 
-    Player.nickname = IO.$nickname.val();
-    Player.roomName = IO.$roomName.val();
+    if (roomName === '' || nickname === '') {
+      $('#modalFormError')
+        .text('Blank values are not allowed.')
+        .css('color', 'red');
+      return;
+    }
+
+    Player.nickname = nickname;
+    Player.roomName = roomName;
     IO.socket.open();
     $('#nicknameModal').modal('hide');
   });
