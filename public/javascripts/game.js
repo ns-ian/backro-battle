@@ -127,7 +127,7 @@ $(function () {
     },
 
     sendBackro: function() {
-      IO.socket.emit('player backro', Player);
+      if (Player.backro.length > 0) IO.socket.emit('player backro', Player);
     },
 
     showBackros: function(players) {
@@ -187,9 +187,12 @@ $(function () {
       });
 
       $('#backro-list').on('click', 'li a', function(e) {
-        Player.vote = $(e.target).text();
-        $('#backro-list li a').css({'background-color':''});
-        $(this).css({'background-color':'#00FF00'});
+        let vote = $(e.target).text();
+        if (Player.backro != vote) {
+          Player.vote = vote;
+          $('#backro-list li a').css({'background-color':''});
+          $(this).css({'background-color':'#00FF00'});
+        }
       });
     },
 
