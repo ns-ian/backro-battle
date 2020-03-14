@@ -9,7 +9,7 @@ html
       crossorigin="anonymous")
     script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous")
     meta(name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no")
-  body
+  body(class="pt-1")
     include modal
     div(class="container")
       div(class="row")
@@ -19,6 +19,6 @@ html
         block content
       div(class="row")
         div(class="col")
-          p footer here
+          p Made by Ian. Distributed under the MIT license.
     script(src='/socket.io/socket.io.js')
     script(src='/javascripts/game.js')

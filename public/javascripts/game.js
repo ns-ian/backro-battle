@@ -78,6 +78,7 @@ $(function () {
     onConnect: function() {
       Player.socketId = IO.socket.id;
       IO.socket.emit('join room', Player);
+      $('#room-name').text(Player.roomName);
     },
 
     updatePlayerList: function(players) {

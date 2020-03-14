@@ -9,16 +9,21 @@ block content
       ul(id="backro-list")
   div(class="row")
     div(class="col")
-      form(id="backro-form" action="")
-        input(id="backro" autocomplete="off" style="width: 90%;")
-        button(style="width: 10%;") Submit
+      form(id="backro-form" class="w-100" action="")
+        div(class="input-group w-100")
+          input(id="backro" style="width: 90%;" autocomplete="off")
+          div(class="input-group-append" style="width: 10%;")
+            button(class="btn btn-outline-secondary w-100") Submit
   div(class="row" style="height: 30rem;")
     div(class="col-9 h-100")
       div(id="chat-div" class="row overflow-auto" style="height: 90%; padding-left: 15px; padding-right: 15px;")
         ul(id="chat-messages" class="px-0" style="list-style-type: none;")
-      div(class="row" style="height: 10%; padding-left: 15px; padding-right: 15px;")
-        form(id="chat" action="")
-          input(id="m" autocomplete="off")
-          button Send
-    div(class="col-3")
+      form(id="chat" action="")
+        div(class="input-group mb-3")
+          input(id="m" class="form-control" autocomplete="off")
+          div(class="input-group-append")
+            button(class="btn btn-outline-secondary") Send
+    div(id="room-info" class="col-3")
+      p #[strong Room: ]#[span(id="room-name")]#[br]
+      strong Players: #[span(id="player-count")]#[br]
       ul(id="player-list" class="px-0" style="list-style-type: none;")

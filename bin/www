@@ -67,6 +67,7 @@ io.on('connection', function(socket) {
       }
     }
     let allPlayers = rooms[roomName].players;
+    io.in(roomName).emit('system message', player.nickname + ' has joined the room.');
     io.in(roomName).emit('update player list', allPlayers);
   });
 
@@ -76,6 +77,7 @@ io.on('connection', function(socket) {
 
     joinedRooms.forEach(room => {
       if (room != socketId) {
+        io.in(room).emit('system message', rooms[room].players[socketId].nickname + ' has left the room.');
         delete rooms[room].players[socketId];
         io.in(room).emit('update player list', rooms[room].players);
 
