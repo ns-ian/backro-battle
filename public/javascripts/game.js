@@ -1,6 +1,10 @@
 $(function () {
 
-  $('#nicknameModal').modal('show');
+  $('#nicknameModal').modal({
+    backdrop: 'static',
+    keyboard: false,
+    show: true
+  });
 
   $('#nicknameModalForm').submit(function(e) {
     e.preventDefault();
