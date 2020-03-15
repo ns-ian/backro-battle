@@ -167,9 +167,21 @@ $(function () {
       Game.players = players;
       IO.$backroList.empty();
       for (const player in Game.players) {
+        let votesReceived = Game.players[player].votesReceived;
+        let votesGrammaticalForm = '';
+
+        if (votesReceived === 1) {
+          votesGrammaticalForm = 'vote';
+        } else {
+          votesGrammaticalForm = 'votes';
+        }
+
         IO.$backroList.append(
           $('<li>' + Game.players[player].backro +
-            ' <strong>(' + Game.players[player].votesReceived +
+            ' <strong>(' +
+            Game.players[player].nickname + ' - ' +
+            votesReceived + ' ' +
+            votesGrammaticalForm +
             ')</strong></li>')
         );
       }
