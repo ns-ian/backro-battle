@@ -46,7 +46,7 @@ io.on('connection', function(socket) {
 
       gameRoom.players = {};
       gameRoom.inProgress = false;
-      gameRoom.roundNumber = 10;
+      gameRoom.roundNumber = 0;
       gameRoom.sockets = [];
       gameRoom.readyQueue = [];
       gameRoom.next = beginRound;
@@ -152,7 +152,7 @@ const beginRound = function(roomName) {
   gameRoom.roundNumber++;
   gameRoom.roundAcro = makeAcroString(acroLength);
   gameRoom.next = collectBackros;
-  io.sockets.in(roomName).emit('begin round', gameRoom.roundAcro);
+  io.sockets.in(roomName).emit('begin round', gameRoom.roundNumber, gameRoom.roundAcro);
   let template = 'This round\'s acro is <b>${this.acro}</b><br>You have ${this.seconds} seconds to find a backronym!';
   countdown(roomName, template, { seconds: 30, acro: gameRoom.roundAcro });
 }

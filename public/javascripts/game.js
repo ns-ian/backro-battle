@@ -59,6 +59,8 @@ $(function () {
       IO.$backroInput = $('#backro');
       IO.$backroForm = $('#backro-form');
       IO.$backroList = $('#backro-list');
+      IO.$roomNameInfo = $('#room-name');
+      IO.$roundNumber = $('#round-number');
     },
 
     bindEvents: function() {
@@ -82,7 +84,7 @@ $(function () {
     onConnect: function() {
       Player.socketId = IO.socket.id;
       IO.socket.emit('join room', Player);
-      $('#room-name').text(Player.roomName);
+      IO.$roomNameInfo.text(Player.roomName);
     },
 
     updatePlayerList: function(players) {
@@ -95,11 +97,13 @@ $(function () {
     },
 
     chatMessage: function(nickname, msg) {
-      let prefix = '<strong>' + nickname + ': </strong>';
       let msgBody = $.parseHTML(msg);
-      let message = prefix + $(msgBody).text();
-      IO.$chatMessages.append($('<li>').html(message));
-      IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
+      if (msgBody != '') {
+        let prefix = '<strong>' + nickname + ': </strong>';
+        let message = prefix + $(msgBody).text();
+        IO.$chatMessages.append($('<li>').html(message));
+        IO.$chatDiv.scrollTop(IO.$chatDiv[0].scrollHeight);
+      }
     },
 
     systemMessage: function(msg) {
@@ -125,7 +129,8 @@ $(function () {
       IO.socket.emit('round ready', Player.roomName);
     },
 
-    beginRound: function(acro) {
+    beginRound: function(roundNumber, acro) {
+      IO.$roundNumber.text(roundNumber);
       IO.$backroList.empty();
       Game.acro = acro;
       Player.backro = '';
