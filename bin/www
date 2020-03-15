@@ -31,6 +31,12 @@ var io = require('socket.io')(server);
 var rooms = {};
 const CHARACTERS = 'ABCDEFGHIJKLMNOPRSTUVWYZ'; // X isn't fun
                                                // addendum: neither is Q
+const NEWGAME_COUNTDOWN_TIME = 30;
+const SUBMISSION_TIME = 60;
+const VOTING_TIME = 30;
+const RESULTS_TIME = 30;
+const ANNOUNCE_WINNER_TIME = 15;
+
 io.on('connection', function(socket) {
   console.log('a user connected');
   console.log(socket.id);
@@ -63,7 +69,7 @@ io.on('connection', function(socket) {
       console.log(rooms);
       if (gameRoom.sockets.length > 2 && !gameRoom.inProgress) {
         gameRoom.inProgress = true;
-        countdown(roomName, 'The game will begin in ${this.seconds} seconds.', { seconds: 30 });
+        countdown(roomName, 'The game will begin in ${this.seconds} seconds.', { seconds: NEWGAME_COUNTDOWN_TIME });
       }
     }
     let allPlayers = rooms[roomName].players;
@@ -154,7 +160,7 @@ const beginRound = function(roomName) {
   gameRoom.next = collectBackros;
   io.sockets.in(roomName).emit('begin round', gameRoom.roundNumber, gameRoom.roundAcro);
   let template = 'This round\'s acro is <b>${this.acro}</b><br>You have ${this.seconds} seconds to find a backronym!';
-  countdown(roomName, template, { seconds: 30, acro: gameRoom.roundAcro });
+  countdown(roomName, template, { seconds: SUBMISSION_TIME, acro: gameRoom.roundAcro });
 }
 
 const collectBackros = function(roomName) {
@@ -165,7 +171,7 @@ const collectBackros = function(roomName) {
 const beginVoting = function(roomName) {
   rooms[roomName].next = collectVotes;
   io.sockets.in(roomName).emit('show backros', rooms[roomName].players);
-  countdown(roomName, 'Got submissions! Voting round ends in ${this.seconds} seconds.', { seconds: 30 });
+  countdown(roomName, 'Got submissions! Voting round ends in ${this.seconds} seconds.', { seconds: VOTING_TIME });
 }
 
 const collectVotes = function(roomName) {
@@ -182,9 +188,9 @@ const showResults = function(roomName) {
     gameRoom.players[player].votesReceived = 0;
   }
   if (gameRoom.roundNumber > 9) {
-    countdown(roomName, 'The results are in! Winner(s) will be declared in ${this.seconds} seconds.', { seconds: 10 });
+    countdown(roomName, 'The results are in! Winner(s) will be declared in ${this.seconds} seconds.', { seconds: ANNOUNCE_WINNER_TIME });
   } else {
-    countdown(roomName, 'The results are in! Next round begins in ${this.seconds} seconds.', { seconds: 30 });
+    countdown(roomName, 'The results are in! Next round begins in ${this.seconds} seconds.', { seconds: RESULTS_TIME });
   }
 }
 
@@ -251,7 +257,7 @@ const startNewGame = function(player) {
   gameRoom.roundNumber = 0;
 
   let template = 'New game requested. The first round will start in ${this.seconds} seconds...';
-  countdown(player.roomName, template, { seconds: 60 });
+  countdown(player.roomName, template, { seconds: NEWGAME_COUNTDOWN_TIME });
 }
 
 /**
