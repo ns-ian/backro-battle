@@ -137,23 +137,28 @@ $(function () {
     },
 
     sendBackro: function() {
-      if (Player.backro.length > 0) IO.socket.emit('player backro', Player);
+      IO.socket.emit('player backro', Player);
     },
 
     showBackros: function(players) {
       Game.players = players;
       IO.$backroList.empty();
       for (const player in Game.players) {
-        IO.$backroList.append(
-          $('<li><a href="#" style="text-decoration: none;">' +
-            Game.players[player].backro +
-            '</a></li>')
-        );
+        if (Game.players[player].backro != '') {
+          IO.$backroList.append(
+            $('<li><a href="#" style="text-decoration: none;">' +
+              Game.players[player].backro +
+              '</a></li>')
+          );
+        }
       }
     },
 
     sendVote: function() {
-      if (Player.vote === '') { IO.socket.emit('player vote', Player, null) }
+      if (Player.vote === '') {
+        IO.socket.emit('player vote', Player, null)
+        return;
+      }
 
       for (const player in Game.players) {
         if (Player.vote === Game.players[player].backro) {
@@ -167,23 +172,25 @@ $(function () {
       Game.players = players;
       IO.$backroList.empty();
       for (const player in Game.players) {
-        let votesReceived = Game.players[player].votesReceived;
-        let votesGrammaticalForm = '';
+        if (Game.players[player].backro != '') {
+          let votesReceived = Game.players[player].votesReceived;
+          let votesGrammaticalForm = '';
 
-        if (votesReceived === 1) {
-          votesGrammaticalForm = 'vote';
-        } else {
-          votesGrammaticalForm = 'votes';
+          if (votesReceived === 1) {
+            votesGrammaticalForm = 'vote';
+          } else {
+            votesGrammaticalForm = 'votes';
+          }
+
+          IO.$backroList.append(
+            $('<li>' + Game.players[player].backro +
+              ' <strong>(' +
+              Game.players[player].nickname + ' - ' +
+              votesReceived + ' ' +
+              votesGrammaticalForm +
+              ')</strong></li>')
+          );
         }
-
-        IO.$backroList.append(
-          $('<li>' + Game.players[player].backro +
-            ' <strong>(' +
-            Game.players[player].nickname + ' - ' +
-            votesReceived + ' ' +
-            votesGrammaticalForm +
-            ')</strong></li>')
-        );
       }
     },
   };
