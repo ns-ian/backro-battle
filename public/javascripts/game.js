@@ -160,11 +160,15 @@ $(function () {
         return;
       }
 
+      let sentVote = false;
       for (const player in Game.players) {
         if (Player.vote === Game.players[player].backro) {
           IO.socket.emit('player vote', Player, player);
+          sentVote = true;
         }
       }
+      if (!sentVote) IO.socket.emit('player vote', Player, null);
+
       Player.vote = '';
     },
 
