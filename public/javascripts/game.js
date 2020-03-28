@@ -155,21 +155,17 @@ $(function () {
     },
 
     sendVote: function() {
-      if (Player.vote === '') {
-        IO.socket.emit('player vote', Player, null)
-        return;
-      }
-
-      let sentVote = false;
-      for (const player in Game.players) {
-        if (Player.vote === Game.players[player].backro) {
-          IO.socket.emit('player vote', Player, player);
-          sentVote = true;
+      if (Player.vote != '' && Player.backro != '') {
+        for (const player in Game.players) {
+          if (Player.vote === Game.players[player].backro) {
+            IO.socket.emit('player vote', Player, player);
+            Player.vote = '';
+            return;
+          }
         }
+      } else {
+        IO.socket.emit('player vote', Player, null);
       }
-      if (!sentVote) IO.socket.emit('player vote', Player, null);
-
-      Player.vote = '';
     },
 
     showResults: function(players) {
