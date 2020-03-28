@@ -34,7 +34,7 @@ const CHARACTERS = 'ABCDEFGHIJKLMNOPRSTUVWYZ'; // X isn't fun
 const NEWGAME_COUNTDOWN_TIME = 30;
 const SUBMISSION_TIME = 60;
 const VOTING_TIME = 30;
-const RESULTS_TIME = 30;
+const RESULTS_TIME = 20;
 const ANNOUNCE_WINNER_TIME = 15;
 
 io.on('connection', function(socket) {
