@@ -124,13 +124,16 @@ io.on('connection', function(socket) {
   });
 
   socket.on('player vote', function(player, vote) {
-    if (vote != null) {
-      rooms[player.roomName].players[vote].score++;
-      rooms[player.roomName].players[vote].votesReceived++;
-    }
+    let gameRoom = rooms[player.roomName];
+    gameRoom.players[socket.id].vote = vote;
+    if (vote != null) gameRoom.players[vote].votesReceived++;
     countReadyPlayers(player.roomName, player.socketId);
   });
 });
+
+/**
+ * Utility functions
+ */
 
 const countdown = function(roomName, template, time) {
   var countdownInterval = setInterval(function() {
@@ -186,6 +189,8 @@ const collectVotes = function(roomName) {
 const showResults = function(roomName) {
   let gameRoom = rooms[roomName];
   gameRoom.roundNumber > 9 ? gameRoom.next = postGame : gameRoom.next = beginRound;
+
+  awardPoints(gameRoom);
   io.sockets.in(roomName).emit('voting results', gameRoom.players);
   io.sockets.in(roomName).emit('update player list', gameRoom.players);
   for (const player in gameRoom.players) {
@@ -195,6 +200,15 @@ const showResults = function(roomName) {
     countdown(roomName, 'The results are in! Winner(s) will be declared in ${this.seconds} seconds.', { seconds: ANNOUNCE_WINNER_TIME });
   } else {
     countdown(roomName, 'The results are in! Next round begins in ${this.seconds} seconds.', { seconds: RESULTS_TIME });
+  }
+}
+
+const awardPoints = function(gameRoom) {
+  for (const player in gameRoom.players) {
+    let currentPlayer = gameRoom.players[player];
+    if (currentPlayer.vote) {
+      currentPlayer.score += currentPlayer.votesReceived;
+    }
   }
 }
 
