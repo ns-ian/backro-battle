@@ -240,9 +240,9 @@ const announceWinners = function(winners, roomName) {
       if (index === 0) {
         winnersString = element.nickname;
       } else if (index === winners.length - 1) {
-        winnersString.concat(' and ', element.nickname, '!');
+        winnersString = winnersString + ', and ' + element.nickname + '!';
       } else {
-        winnersString.concat(', ', element.nickname);
+        winnersString = winnersString + ', ' + element.nickname;
       }
     });
     announcement = 'And the winners are... ' + winnersString;
