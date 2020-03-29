@@ -143,14 +143,21 @@ $(function () {
     showBackros: function(players) {
       Game.players = players;
       IO.$backroList.empty();
+
+      let backros = [];
       for (const player in Game.players) {
-        if (Game.players[player].backro != '') {
-          IO.$backroList.append(
-            $('<li><a href="#" style="text-decoration: none;">' +
-              Game.players[player].backro +
-              '</a></li>')
-          );
-        }
+        let backro = Game.players[player].backro;
+        if (backro != '') backros.push(backro);
+      }
+
+      let backrosLen = backros.length;
+      for (let i = 0; i < backrosLen; i++) {
+        let index = Game.randomIntFromInterval(0, backros.length - 1);
+        IO.$backroList.append(
+          $('<li><a href="#" style="text-decoration: none;">' +
+            backros[index] + '</a></li>')
+        );
+        backros.splice(index, 1);
       }
     },
 
@@ -244,6 +251,10 @@ $(function () {
           return true;
         }
       }
+    },
+
+    randomIntFromInterval: function(min, max) {
+      return Math.floor(Math.random() * (max - min + 1) + min);
     },
   };
 

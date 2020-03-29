@@ -134,11 +134,15 @@ io.on('connection', function(socket) {
 
 const countdown = function(roomName, template, time) {
   var countdownInterval = setInterval(function() {
-    time.seconds--;
-    io.sockets.in(roomName).emit('countdown', template, time);
-    if (time.seconds <= 0) {
+    if (rooms.hasOwnProperty(roomName)) {
+      time.seconds--;
+      io.sockets.in(roomName).emit('countdown', template, time);
+      if (time.seconds <= 0) {
+        clearInterval(countdownInterval);
+        io.sockets.in(roomName).emit('countdown finished');
+      }
+    } else {
       clearInterval(countdownInterval);
-      io.sockets.in(roomName).emit('countdown finished');
     }
   }, 1000);
 }
