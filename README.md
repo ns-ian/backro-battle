@@ -9,3 +9,12 @@ Navigate to http://backro-battle.herokuapp.com/ and choose a room name to join, 
 * You cannot vote for your own phrase
 * If a player does partipate in voting, they forfeit any points earned that round
 * Players who do not submit a phrase cannot vote for that round
+
+## Running locally
+The project requires Node.js to be installed on your machine.
+```
+$ git clone https://github.com/ns-ian/backro-battle.git
+$ cd ./backro-battle
+$ npm install && npm start
+```
+Once the server is running, navigate to http://localhost:3000/ in your web browser.
